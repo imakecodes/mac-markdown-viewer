@@ -48,6 +48,30 @@ final class DropAwareWebView: WKWebView {
         return super.performDragOperation(sender)
     }
 
+    // MARK: Key intercepts – ⌘F, ⌘G, ⇧⌘G, Escape
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let cmd = event.modifierFlags.contains(.command)
+        let sft = event.modifierFlags.contains(.shift)
+        switch (cmd, sft, event.characters) {
+        case (true, false, "f"):
+            NotificationCenter.default.post(name: .activateFindBar, object: objectIdentifier)
+            return true
+        case (true, false, "g"):
+            NotificationCenter.default.post(name: .findNext, object: objectIdentifier)
+            return true
+        case (true, true, "G"):
+            NotificationCenter.default.post(name: .findPrev, object: objectIdentifier)
+            return true
+        default:
+            return super.performKeyEquivalent(with: event)
+        }
+    }
+
+    /// Stable identity token posted with notifications so PaneView can ignore
+    /// events from other panes' web views.
+    var objectIdentifier: AnyObject { self }
+
     // MARK: Helpers
 
     private func markdownURL(from info: NSDraggingInfo) -> URL? {
@@ -66,10 +90,10 @@ final class DropAwareWebView: WKWebView {
 struct MarkdownWebView: NSViewRepresentable {
     let htmlContent: String
     let baseURL: URL?
-    /// Called when a .md file drag enters or exits the view
     var onDropTargeted: ((Bool) -> Void)? = nil
-    /// Called when a .md file is actually dropped
     var onFileDrop: ((URL) -> Void)? = nil
+    /// Injected so the web view can register itself for JS find calls
+    var findController: FindController? = nil
 
     // MARK: Coordinator – tracks last-loaded content to avoid redundant reloads
 
@@ -86,22 +110,21 @@ struct MarkdownWebView: NSViewRepresentable {
         let webView = DropAwareWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
         webView.onDropTargeted = onDropTargeted
-        webView.onFileDrop = onFileDrop
+        webView.onFileDrop     = onFileDrop
+        findController?.webView = webView
         return webView
     }
 
     func updateNSView(_ webView: DropAwareWebView, context: Context) {
-        // Always keep the callbacks current (closures may capture new state)
-        webView.onDropTargeted = onDropTargeted
-        webView.onFileDrop = onFileDrop
+        webView.onDropTargeted  = onDropTargeted
+        webView.onFileDrop      = onFileDrop
+        findController?.webView = webView
 
-        // Only reload HTML when content actually changed – prevents the web view
-        // from re-rendering every time isFileDropTargeted flips.
-        guard context.coordinator.lastHTML != htmlContent
-                || context.coordinator.lastBaseURL != baseURL
+        guard context.coordinator.lastHTML    != htmlContent
+           || context.coordinator.lastBaseURL != baseURL
         else { return }
 
-        context.coordinator.lastHTML = htmlContent
+        context.coordinator.lastHTML    = htmlContent
         context.coordinator.lastBaseURL = baseURL
         webView.loadHTMLString(wrapInHTMLPage(htmlContent), baseURL: baseURL)
     }
@@ -345,6 +368,20 @@ struct MarkdownWebView: NSViewRepresentable {
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--fg-tertiary); }
 
+        /* Find highlights */
+        mark.mvfind {
+            background: rgba(253, 224, 71, 0.50);
+            color: inherit;
+            border-radius: 2px;
+            padding: 0 1px;
+            outline: none;
+        }
+        mark.mvfind-active {
+            background: rgba(251, 146, 60, 0.80);
+            outline: 2px solid rgba(251, 146, 60, 0.95);
+            border-radius: 2px;
+        }
+
         /* Mermaid diagrams – always light background for readability */
         .mermaid {
             display: flex;
@@ -365,6 +402,82 @@ struct MarkdownWebView: NSViewRepresentable {
         </head>
         <body>
         \(body)
+        <script>
+        // ── Find engine ──────────────────────────────────────────────
+        window._mvFind = (function() {
+            var matches = [], current = -1;
+
+            function escapeRe(s) {
+                return s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+            }
+
+            function clearMarks() {
+                document.querySelectorAll('mark.mvfind').forEach(function(m) {
+                    var t = document.createTextNode(m.textContent);
+                    m.parentNode.replaceChild(t, m);
+                });
+                // Merge adjacent text nodes so next search works correctly
+                document.body.normalize();
+                matches = []; current = -1;
+            }
+
+            function highlight() {
+                matches.forEach(function(m, i) {
+                    m.className = (i === current) ? 'mvfind mvfind-active' : 'mvfind';
+                });
+                if (matches[current]) {
+                    matches[current].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+
+            return {
+                search: function(term) {
+                    clearMarks();
+                    if (!term) return 0;
+                    var re = new RegExp(escapeRe(term), 'gi');
+                    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+                        acceptNode: function(n) {
+                            var tag = n.parentElement && n.parentElement.tagName;
+                            if (tag === 'SCRIPT' || tag === 'STYLE') return NodeFilter.FILTER_REJECT;
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    });
+                    var nodes = [];
+                    while (walker.nextNode()) nodes.push(walker.currentNode);
+                    nodes.forEach(function(node) {
+                        var text = node.textContent;
+                        if (!re.test(text)) { re.lastIndex = 0; return; }
+                        re.lastIndex = 0;
+                        var frag = document.createDocumentFragment(), last = 0, m;
+                        while ((m = re.exec(text)) !== null) {
+                            if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+                            var mark = document.createElement('mark');
+                            mark.className = 'mvfind';
+                            mark.textContent = m[0];
+                            matches.push(mark);
+                            frag.appendChild(mark);
+                            last = re.lastIndex;
+                        }
+                        if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+                        node.parentNode.replaceChild(frag, node);
+                    });
+                    if (matches.length > 0) { current = 0; highlight(); }
+                    return matches.length;
+                },
+                next: function() {
+                    if (!matches.length) return;
+                    current = (current + 1) % matches.length;
+                    highlight();
+                },
+                prev: function() {
+                    if (!matches.length) return;
+                    current = (current - 1 + matches.length) % matches.length;
+                    highlight();
+                },
+                clear: clearMarks
+            };
+        })();
+        </script>
         <script>
         (function() {
             // Mermaid: always use default (light) theme so diagram text is legible

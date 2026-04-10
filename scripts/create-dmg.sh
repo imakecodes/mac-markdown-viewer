@@ -12,7 +12,9 @@ TMP_DMG=".build/tmp.dmg"
 
 echo "→ Gerando imagem de fundo..."
 mkdir -p "$STAGING_DIR/.background"
-swift "$DMG_BG_SCRIPT" "$STAGING_DIR/.background/bg.png" "$WINDOW_W" "$WINDOW_H"
+# Pass the real app icon so it appears in the background canvas
+ICON_PATH="$(dirname "$DMG_BG_SCRIPT")/../icone.png"
+swift "$DMG_BG_SCRIPT" "$STAGING_DIR/.background/bg.png" "$WINDOW_W" "$WINDOW_H" "$(realpath "$ICON_PATH" 2>/dev/null || echo "")"
 
 echo "→ Preparando conteúdo do DMG..."
 rm -rf "$STAGING_DIR/Markdown Viewer.app"

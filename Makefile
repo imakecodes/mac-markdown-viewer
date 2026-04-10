@@ -6,6 +6,7 @@ RELEASE_DIR = $(BUILD_DIR)/release
 APP_BUNDLE = $(BUILD_DIR)/$(BUNDLE_NAME)
 INSTALL_DIR = /Applications
 PLIST = Sources/MarkdownViewer/Info.plist
+ICNS  = Sources/MarkdownViewer/AppIcon.icns
 DMG_NAME = MarkdownViewer.dmg
 DMG_PATH = $(BUILD_DIR)/$(DMG_NAME)
 DMG_VOLUME = Markdown Viewer
@@ -31,6 +32,7 @@ bundle: release
 	@mkdir -p "$(APP_BUNDLE)/Contents/Resources"
 	@cp "$(RELEASE_DIR)/$(EXECUTABLE)" "$(APP_BUNDLE)/Contents/MacOS/$(EXECUTABLE)"
 	@cp "$(PLIST)" "$(APP_BUNDLE)/Contents/Info.plist"
+	@cp "$(ICNS)"  "$(APP_BUNDLE)/Contents/Resources/AppIcon.icns"
 	@echo "APPL????" > "$(APP_BUNDLE)/Contents/PkgInfo"
 	@echo "✓ $(BUNDLE_NAME) criado em $(BUILD_DIR)/"
 

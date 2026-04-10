@@ -13,7 +13,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Markdown", package: "swift-markdown"),
             ],
-            exclude: ["Info.plist"]
+            exclude: ["Info.plist", "AppIcon.icns"]
         ),
     ]
 )

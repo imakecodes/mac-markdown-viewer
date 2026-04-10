@@ -89,8 +89,12 @@ struct SplitPaneContainer: View {
 struct PaneView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var pane: Pane
-    @State private var isHoveringHeader = false
+    @State private var isHoveringHeader   = false
     @State private var isFileDropTargeted = false
+    @State private var showFindBar        = false
+    @State private var findQuery          = ""
+    @State private var findFocusRequest   = false
+    @StateObject private var findController = FindController()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -100,12 +104,21 @@ struct PaneView: View {
                     .onHover { isHoveringHeader = $0 }
             }
 
+            // Find bar (visible when ⌘F is pressed and a file is open)
+            if showFindBar && pane.fileURL != nil {
+                FindBar(
+                    controller:   findController,
+                    query:        $findQuery,
+                    isVisible:    $showFindBar,
+                    focusRequest: $findFocusRequest
+                )
+                .background(FocusTrigger(focused: $findFocusRequest))
+            }
+
             // Content area with file-drop support
             ZStack {
                 if pane.fileURL != nil {
                     let htmlBody = MarkdownHTMLRenderer.renderHTML(from: pane.markdownContent)
-                    // WKWebView intercepts AppKit drag events, so we drive the overlay
-                    // via DropAwareWebView callbacks instead of SwiftUI's onDrop.
                     MarkdownWebView(
                         htmlContent: htmlBody,
                         baseURL: pane.fileURL?.deletingLastPathComponent(),
@@ -115,38 +128,43 @@ struct PaneView: View {
                             }
                         },
                         onFileDrop: { url in
-                            // Open in a NEW pane (split) instead of replacing this pane.
-                            // Calling pane.load() here would trigger webView.loadHTMLString(),
-                            // which resets WKWebView's internal drag-destination registration
-                            // and breaks every subsequent drag onto this pane.
-                            appState.openInNewPane(url: url)
-                        }
+                            pane.load(url: url)
+                            appState.activePaneID = pane.id
+                            appState.recentFiles = RecentFilesManager.add(url, to: appState.recentFiles)
+                            appState.objectWillChange.send()
+                        },
+                        findController: findController
                     )
                 } else {
-                    // Empty state is pure SwiftUI – onDrop works fine here.
                     PaneEmptyState(pane: pane)
                         .onDrop(of: [.fileURL], isTargeted: $isFileDropTargeted) { providers in
                             handleFileDrop(providers)
                         }
                 }
 
-                // VSCode-style drop overlay (driven by either path above)
-                if isFileDropTargeted {
-                    fileDropOverlay
-                }
+                if isFileDropTargeted { fileDropOverlay }
             }
         }
         .overlay(
-            // Active pane indicator border
             appState.activePaneID == pane.id && appState.panes.count > 1
                 ? RoundedRectangle(cornerRadius: 0)
                     .strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 2)
                 : nil
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            appState.activePaneID = pane.id
+        .onTapGesture { appState.activePaneID = pane.id }
+        .onReceive(NotificationCenter.default.publisher(for: .activateFindBar)) { _ in
+            guard isActivePane, pane.fileURL != nil else { return }
+            if showFindBar {
+                findFocusRequest = true   // already open – re-focus the field
+            } else {
+                showFindBar      = true   // FindBar.onAppear triggers focus
+            }
         }
+    }
+
+    private var isActivePane: Bool {
+        appState.activePaneID == pane.id || appState.panes.count == 1
     }
 
     // MARK: Drop overlay
@@ -447,5 +465,35 @@ extension View {
             if inside { cursor.push() }
             else { NSCursor.pop() }
         }
+    }
+}
+
+// MARK: - FocusTrigger
+// Walks the NSView hierarchy to find a FindNSTextField and make it first responder.
+
+struct FocusTrigger: NSViewRepresentable {
+    @Binding var focused: Bool
+
+    func makeNSView(context: Context) -> NSView { NSView() }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard focused else { return }
+        focused = false
+        // Defer so the view tree is fully laid out before we search it
+        DispatchQueue.main.async {
+            guard let window = nsView.window else { return }
+            if let field = findFindTextField(in: window.contentView) {
+                window.makeFirstResponder(field)
+            }
+        }
+    }
+
+    private func findFindTextField(in view: NSView?) -> FindNSTextField? {
+        guard let view else { return nil }
+        if let f = view as? FindNSTextField { return f }
+        for sub in view.subviews {
+            if let found = findFindTextField(in: sub) { return found }
+        }
+        return nil
     }
 }

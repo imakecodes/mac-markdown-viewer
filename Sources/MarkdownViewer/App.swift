@@ -21,6 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let mainMenu = NSMenu()
         app(menu: mainMenu)
         fileMenu(menu: mainMenu)
+        findMenu(menu: mainMenu)
         editMenu(menu: mainMenu)
         viewMenu(menu: mainMenu)
         windowMenu(menu: mainMenu)
@@ -121,6 +122,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         mainMenu.addItem(fileItem)
     }
 
+    private func findMenu(menu mainMenu: NSMenu) {
+        let findMenu = NSMenu(title: "Buscar")
+        findMenu.autoenablesItems = false
+        let findItem = NSMenuItem()
+        findItem.submenu = findMenu
+
+        let searchItem = NSMenuItem(title: "Buscar…", action: #selector(activateFind), keyEquivalent: "f")
+        searchItem.target = self
+        searchItem.isEnabled = true
+        findMenu.addItem(searchItem)
+
+        let nextItem = NSMenuItem(title: "Próximo Resultado", action: #selector(findNextResult), keyEquivalent: "g")
+        nextItem.target = self
+        nextItem.isEnabled = true
+        findMenu.addItem(nextItem)
+
+        let prevItem = NSMenuItem(title: "Resultado Anterior", action: #selector(findPrevResult), keyEquivalent: "G")
+        prevItem.keyEquivalentModifierMask = [.command, .shift]
+        prevItem.target = self
+        prevItem.isEnabled = true
+        findMenu.addItem(prevItem)
+
+        mainMenu.addItem(findItem)
+    }
+
     private func editMenu(menu mainMenu: NSMenu) {
         let editMenu = NSMenu(title: "Editar")
         let editItem = NSMenuItem()
@@ -170,6 +196,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc func openFile() {
         appState.showOpenPanel()
+    }
+
+    @objc func activateFind() {
+        NotificationCenter.default.post(name: .activateFindBar, object: nil)
+    }
+
+    @objc func findNextResult() {
+        NotificationCenter.default.post(name: .findNext, object: nil)
+    }
+
+    @objc func findPrevResult() {
+        NotificationCenter.default.post(name: .findPrev, object: nil)
     }
 
     @objc func closeActiveDocument() {

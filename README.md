@@ -26,7 +26,18 @@ A lightweight, native macOS Markdown viewer built with SwiftUI and WKWebView.
 
 Pre-built DMG releases are available on the [Releases](https://github.com/imakecodes/mac-markdown-viewer/releases) page.
 
-Download the latest `MarkdownViewer.dmg`, open it and drag **Markdown Viewer.app** to your Applications folder.
+Download the latest `MarkdownViewer-x.y.z.dmg`, open it and drag **Markdown Viewer.app** to your Applications folder.
+
+> **macOS Gatekeeper notice**
+> Because Markdown Viewer is not notarized with an Apple Developer certificate,
+> macOS may show *"Markdown Viewer is damaged and can't be opened"* the first time.
+> This is a false positive caused by the quarantine flag on downloaded files.
+>
+> **To open it**, run this once in Terminal after dragging the app to Applications:
+> ```bash
+> xattr -cr /Applications/"Markdown Viewer.app"
+> ```
+> Alternatively, right-click the app → **Open** → **Open** in the dialog.
 
 ## Build from Source
 

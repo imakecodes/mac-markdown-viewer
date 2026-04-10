@@ -84,6 +84,17 @@ jobs:
           printf 'APPL????' > "$APP/Contents/PkgInfo"
           echo "✓ .app bundle created"
 
+      # ── Ad-hoc code sign ─────────────────────────────────────────────────────
+      # Without a Developer ID certificate the app must be ad-hoc signed so that
+      # macOS does not falsely report it as "damaged" when opened from a DMG.
+      # Users on strict Gatekeeper settings will still need to right-click → Open
+      # or run: xattr -cr "Markdown Viewer.app"
+      - name: Ad-hoc code sign
+        run: |
+          APP=".build/Markdown Viewer.app"
+          codesign --deep --force --sign - --options runtime "$APP"
+          codesign --verify --deep --strict "$APP" && echo "✓ Ad-hoc signature OK"
+
       # ── Package DMG ──────────────────────────────────────────────────────────
       - name: Create DMG
         run: |
@@ -102,7 +113,12 @@ jobs:
             -ov \
             -format UDZO \
             -imagekey zlib-level=9 \
+            -nospotlight \
             "$DMG_NAME"
+
+          # Strip the quarantine attribute that would cause macOS to block the
+          # DMG itself after download (belt-and-suspenders alongside codesign)
+          xattr -rc "$DMG_NAME" || true
 
           echo "dmg_name=$DMG_NAME" >> "$GITHUB_OUTPUT"
           echo "✓ DMG created: $DMG_NAME"

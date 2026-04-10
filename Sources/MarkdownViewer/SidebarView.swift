@@ -35,9 +35,8 @@ struct SidebarView: View {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
-                        .frame(width: 24, height: 24)
-                        .background(Color.primary.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 5))
+                        .frame(width: 26, height: 26)
+                        .liquidGlass(cornerRadius: 6)
                 }
                 .buttonStyle(.plain)
                 .help("Abrir arquivo (⌘O)")
@@ -49,9 +48,8 @@ struct SidebarView: View {
                         Image(systemName: "rectangle.split.1x2")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.secondary)
-                            .frame(width: 24, height: 24)
-                            .background(Color.primary.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                            .frame(width: 26, height: 26)
+                            .liquidGlass(cornerRadius: 6)
                     }
                     .buttonStyle(.plain)
                     .help("Abrir em novo painel (⇧⌘O)")

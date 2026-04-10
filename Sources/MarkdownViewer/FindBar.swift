@@ -176,12 +176,7 @@ struct FindBar: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
-        }
-        .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+        .liquidGlass(cornerRadius: 10)
     }
 
     private var counterText: String {

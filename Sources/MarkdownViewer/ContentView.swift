@@ -282,17 +282,7 @@ struct PaneHeader: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(
-            Group {
-                if isPaneDropTargeted {
-                    Color.accentColor.opacity(0.18)
-                } else if appState.activePaneID == pane.id {
-                    Color.accentColor.opacity(0.06)
-                } else {
-                    Color(nsColor: .separatorColor).opacity(0.15)
-                }
-            }
-        )
+        .liquidGlassBar()
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(isPaneDropTargeted ? Color.accentColor : Color(nsColor: .separatorColor))
@@ -407,13 +397,11 @@ struct WelcomeView: View {
             Spacer()
 
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 100, height: 100)
-
                 Image(systemName: "doc.richtext")
                     .font(.system(size: 40, weight: .light))
                     .foregroundStyle(.secondary)
+                    .frame(width: 100, height: 100)
+                    .liquidGlass(cornerRadius: 28)
             }
 
             VStack(spacing: 8) {
@@ -429,13 +417,12 @@ struct WelcomeView: View {
                 appState.showOpenPanel()
             } label: {
                 Label("Abrir Arquivo", systemImage: "folder")
-                    .font(.system(size: 13, weight: .medium))
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 9)
+                    .liquidGlass(cornerRadius: 10)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.accentColor)
-            .controlSize(.large)
+            .buttonStyle(.plain)
 
             HStack(spacing: 16) {
                 hintBadge(icon: "command", text: "⌘O para abrir")

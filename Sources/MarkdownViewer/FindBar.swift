@@ -114,91 +114,96 @@ struct FindBar: View {
     @ObservedObject var controller: FindController
     @Binding var query:     String
     @Binding var isVisible: Bool
-    /// Called after the bar is inserted into the layout so we can focus the field
     var focusRequest: Binding<Bool>
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+        // Anchored to the top-right of the pane, like VS Code
+        HStack { Spacer(); pill }
+            .padding(.top, 6)
+            .padding(.trailing, 8)
+            .onReceive(NotificationCenter.default.publisher(for: .closeFindBar)) { _ in close() }
+            .onReceive(NotificationCenter.default.publisher(for: .findNext))     { _ in controller.next() }
+            .onReceive(NotificationCenter.default.publisher(for: .findPrev))     { _ in controller.prev() }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    focusRequest.wrappedValue = true
+                }
+            }
+    }
 
-            // Custom field so Escape is reliable across macOS 13+
+    // The compact floating pill
+    private var pill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+
             FindTextField(
                 text: $query,
                 onEscape: close,
                 onEnter:  { controller.next() }
             )
-            .frame(minWidth: 120, maxWidth: 220)
+            .frame(width: 160)
             .onChange(of: query) { controller.search($0) }
 
-            // Counter
-            Group {
-                if !query.isEmpty && controller.matchCount == 0 {
-                    Text("sem resultados")
-                        .foregroundStyle(.red.opacity(0.75))
-                } else if controller.matchCount > 0 {
-                    Text("\(controller.currentIndex + 1) / \(controller.matchCount)")
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                } else {
-                    Color.clear
-                }
+            // Match counter
+            if !query.isEmpty {
+                Text(counterText)
+                    .font(.system(size: 10).monospacedDigit())
+                    .foregroundStyle(controller.matchCount == 0
+                                     ? Color.red.opacity(0.8)
+                                     : Color.secondary)
+                    .fixedSize()
             }
-            .font(.system(size: 11))
-            .frame(minWidth: 70, alignment: .leading)
 
-            Divider().frame(height: 14)
+            Divider().frame(height: 12)
 
-            // Prev / Next
-            HStack(spacing: 1) {
-                arrowButton("chevron.up",   help: "Anterior (⇧⌘G)", action: { controller.prev() })
-                arrowButton("chevron.down", help: "Próximo (⌘G)",    action: { controller.next() })
+            // ↑ ↓ navigation
+            HStack(spacing: 0) {
+                arrowButton("chevron.up",   help: "Anterior ⇧⌘G") { controller.prev() }
+                arrowButton("chevron.down", help: "Próximo ⌘G")    { controller.next() }
             }
             .disabled(controller.matchCount == 0)
 
-            Spacer(minLength: 0)
-
-            // Close
+            // × close
             Button(action: close) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .semibold))
-                    .padding(4)
-                    .background(Color(nsColor: .separatorColor).opacity(0.6))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Fechar (Esc)")
+            .help("Fechar  Esc")
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .bottom) { Divider() }
-        .onReceive(NotificationCenter.default.publisher(for: .closeFindBar)) { _ in close() }
-        .onReceive(NotificationCenter.default.publisher(for: .findNext))     { _ in controller.next() }
-        .onReceive(NotificationCenter.default.publisher(for: .findPrev))     { _ in controller.prev() }
-        .onAppear {
-            // Small delay so the view is fully in the hierarchy before we ask for focus
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                focusRequest.wrappedValue = true
-            }
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
         }
+        .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+    }
+
+    private var counterText: String {
+        guard controller.matchCount > 0 else { return "0" }
+        return "\(controller.currentIndex + 1)/\(controller.matchCount)"
     }
 
     private func close() {
-        query      = ""
-        isVisible  = false
+        query     = ""
+        isVisible = false
         controller.clear()
     }
 
     private func arrowButton(_ icon: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 10, weight: .semibold))
-                .frame(width: 24, height: 22)
+                .font(.system(size: 9, weight: .semibold))
+                .frame(width: 20, height: 20)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
         .help(help)
     }
 }

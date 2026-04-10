@@ -104,17 +104,6 @@ struct PaneView: View {
                     .onHover { isHoveringHeader = $0 }
             }
 
-            // Find bar (visible when ⌘F is pressed and a file is open)
-            if showFindBar && pane.fileURL != nil {
-                FindBar(
-                    controller:   findController,
-                    query:        $findQuery,
-                    isVisible:    $showFindBar,
-                    focusRequest: $findFocusRequest
-                )
-                .background(FocusTrigger(focused: $findFocusRequest))
-            }
-
             // Content area with file-drop support
             ZStack {
                 if pane.fileURL != nil {
@@ -143,6 +132,19 @@ struct PaneView: View {
                 }
 
                 if isFileDropTargeted { fileDropOverlay }
+
+                // Find bar floats over content, top-right corner
+                if showFindBar && pane.fileURL != nil {
+                    FindBar(
+                        controller:   findController,
+                        query:        $findQuery,
+                        isVisible:    $showFindBar,
+                        focusRequest: $findFocusRequest
+                    )
+                    .background(FocusTrigger(focused: $findFocusRequest))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .allowsHitTesting(true)
+                }
             }
         }
         .overlay(

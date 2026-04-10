@@ -1,0 +1,41 @@
+# Swift / Xcode build artifacts
+.build/
+*.o
+*.d
+*.swp
+*.lock
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/
+DerivedData/
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# App bundles and distribution
+*.app
+*.dmg
+*.pkg
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Crash logs
+*.crash
+
+# Environment / secrets
+.env
+.env.local

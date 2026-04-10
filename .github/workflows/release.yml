@@ -1,0 +1,157 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed to read all tags
+
+      # ── Determine next semver ────────────────────────────────────────────────
+      - name: Compute next version
+        id: version
+        run: |
+          # Latest semver tag (default v0.0.0 if none exist)
+          LATEST=$(git tag --sort=-v:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | head -1 || true)
+          [ -z "$LATEST" ] && LATEST="v0.0.0"
+          echo "Latest tag: $LATEST"
+
+          MAJOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f1)
+          MINOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f2)
+          PATCH=$(echo "$LATEST" | sed 's/v//' | cut -d. -f3)
+
+          # Collect commit messages since the last tag
+          if [ "$LATEST" = "v0.0.0" ]; then
+            COMMITS=$(git log --pretty=format:"%s" HEAD)
+          else
+            COMMITS=$(git log --pretty=format:"%s" "${LATEST}..HEAD")
+          fi
+
+          # Determine bump type from conventional commits
+          #   BREAKING CHANGE or <type>!:  → major
+          #   feat:                         → minor
+          #   anything else                 → patch
+          BUMP="patch"
+          if echo "$COMMITS" | grep -qE '(BREAKING CHANGE|!:)'; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -qE '^feat(\([^)]*\))?:'; then
+            BUMP="minor"
+          fi
+
+          case $BUMP in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$VERSION"             >> "$GITHUB_OUTPUT"
+          echo "version_num=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
+          echo "bump=$BUMP"                   >> "$GITHUB_OUTPUT"
+          echo "→ Next version: $VERSION  (bump: $BUMP)"
+
+      # ── Build ────────────────────────────────────────────────────────────────
+      - name: Resolve Swift packages
+        run: swift package resolve
+
+      - name: Build release binary
+        run: swift build -c release
+
+      # ── Bundle .app ──────────────────────────────────────────────────────────
+      - name: Create .app bundle
+        run: |
+          APP=".build/Markdown Viewer.app"
+          EXE=".build/release/MarkdownViewer"
+          PLIST="Sources/MarkdownViewer/Info.plist"
+
+          rm -rf "$APP"
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+          cp "$EXE"   "$APP/Contents/MacOS/MarkdownViewer"
+          cp "$PLIST" "$APP/Contents/Info.plist"
+          printf 'APPL????' > "$APP/Contents/PkgInfo"
+          echo "✓ .app bundle created"
+
+      # ── Package DMG ──────────────────────────────────────────────────────────
+      - name: Create DMG
+        run: |
+          VER="${{ steps.version.outputs.version_num }}"
+          DMG_NAME="MarkdownViewer-${VER}.dmg"
+          STAGING=".build/dmg-staging"
+
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING"
+          cp -R ".build/Markdown Viewer.app" "$STAGING/"
+          ln -sf /Applications "$STAGING/Applications"
+
+          hdiutil create \
+            -volname "Markdown Viewer ${VER}" \
+            -srcfolder "$STAGING" \
+            -ov \
+            -format UDZO \
+            -imagekey zlib-level=9 \
+            "$DMG_NAME"
+
+          echo "dmg_name=$DMG_NAME" >> "$GITHUB_OUTPUT"
+          echo "✓ DMG created: $DMG_NAME"
+        id: dmg
+
+      # ── Tag & Release ────────────────────────────────────────────────────────
+      - name: Create git tag
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+          git push origin "${{ steps.version.outputs.version }}"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          LATEST_TAG=$(git tag --sort=-v:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sed -n '2p' || true)
+
+          if [ -z "$LATEST_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${LATEST_TAG}..HEAD"
+          fi
+
+          NOTES=$(git log --pretty=format:"- %s (%h)" "$RANGE" || true)
+          [ -z "$NOTES" ] && NOTES="- Initial release"
+
+          # Write multiline output safely
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          body: |
+            ## What's new
+
+            ${{ steps.changelog.outputs.notes }}
+
+            ---
+            **macOS 13+ required.**
+            Download `MarkdownViewer-${{ steps.version.outputs.version_num }}.dmg`, open it and drag **Markdown Viewer.app** to Applications.
+          files: ${{ steps.dmg.outputs.dmg_name }}
+          draft: false
+          prerelease: false

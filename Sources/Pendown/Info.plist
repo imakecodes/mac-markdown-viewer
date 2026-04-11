@@ -3,25 +3,29 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>pt-BR</string>
+    <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>MarkdownViewer</string>
+    <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIconFile</key>
+    <string></string>
+    <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.lab.markdown-viewer</string>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Markdown Viewer</string>
+    <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>
-    <string>APPL</string>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.developer-tools</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticTermination</key>
@@ -34,9 +38,9 @@
             <key>CFBundleTypeName</key>
             <string>Markdown Document</string>
             <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
+            <string>Editor</string>
             <key>LSHandlerRank</key>
-            <string>Owner</string>
+            <string>Default</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>net.daringfireball.markdown</string>
@@ -46,9 +50,9 @@
             <key>CFBundleTypeName</key>
             <string>Markdown File</string>
             <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
+            <string>Editor</string>
             <key>LSHandlerRank</key>
-            <string>Owner</string>
+            <string>Default</string>
             <key>CFBundleTypeExtensions</key>
             <array>
                 <string>md</string>

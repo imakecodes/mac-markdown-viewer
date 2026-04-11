@@ -6,7 +6,8 @@
 *.lock
 xcuserdata/
 *.xcworkspace/xcuserdata/
-*.xcodeproj/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
 DerivedData/
 
 # Swift Package Manager

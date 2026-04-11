@@ -4,7 +4,7 @@ set -euo pipefail
 APP_BUNDLE="$1"
 DMG_PATH="$2"
 DMG_BG_SCRIPT="$3"
-VOLUME_NAME="Markdown Viewer"
+VOLUME_NAME="Pendown"
 WINDOW_W=660
 WINDOW_H=400
 STAGING_DIR=".build/dmg-staging"
@@ -17,8 +17,8 @@ ICON_PATH="$(dirname "$DMG_BG_SCRIPT")/../icone.png"
 swift "$DMG_BG_SCRIPT" "$STAGING_DIR/.background/bg.png" "$WINDOW_W" "$WINDOW_H" "$(realpath "$ICON_PATH" 2>/dev/null || echo "")"
 
 echo "→ Preparando conteúdo do DMG..."
-rm -rf "$STAGING_DIR/Markdown Viewer.app"
-cp -R "$APP_BUNDLE" "$STAGING_DIR/Markdown Viewer.app"
+rm -rf "$STAGING_DIR/Pendown.app"
+cp -R "$APP_BUNDLE" "$STAGING_DIR/Pendown.app"
 ln -sf /Applications "$STAGING_DIR/Applications"
 
 echo "→ Criando DMG temporário..."
@@ -47,7 +47,7 @@ tell application "Finder"
         set icon size of theViewOptions to 96
         set text size of theViewOptions to 13
         set background picture of theViewOptions to file ".background:bg.png"
-        set position of item "Markdown Viewer.app" of container window to {185, 180}
+        set position of item "Pendown.app" of container window to {185, 180}
         set position of item "Applications" of container window to {475, 180}
         close
         open

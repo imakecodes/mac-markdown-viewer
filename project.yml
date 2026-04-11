@@ -1,0 +1,59 @@
+name: Pendown
+
+options:
+  bundleIdPrefix: com.pendown
+  deploymentTarget:
+    macOS: "13.0"
+  developmentLanguage: en
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: false
+  groupSortPosition: top
+
+packages:
+  swift-markdown:
+    url: https://github.com/apple/swift-markdown.git
+    from: "0.4.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    COMBINE_HIDPI_IMAGES: YES
+
+targets:
+  Pendown:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/Pendown
+        excludes:
+          - "Info-SPM.plist"
+          - "AppIcon.icns"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pendown.app
+        PRODUCT_NAME: Pendown
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_FILE: Sources/Pendown/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/Pendown/Pendown.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: NO
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+    dependencies:
+      - package: swift-markdown
+        product: Markdown
+schemes:
+  Pendown:
+    build:
+      targets:
+        Pendown: all
+    run:
+      config: Debug
+    archive:
+      config: Release

@@ -63,6 +63,9 @@ final class DropAwareWebView: WKWebView {
         case (true, true, "G"):
             NotificationCenter.default.post(name: .findPrev, object: objectIdentifier)
             return true
+        case (true, false, "k"):
+            NotificationCenter.default.post(name: .toggleCommandPalette, object: nil)
+            return true
         default:
             return super.performKeyEquivalent(with: event)
         }
@@ -95,11 +98,24 @@ struct MarkdownWebView: NSViewRepresentable {
     /// Injected so the web view can register itself for JS find calls
     var findController: FindController? = nil
 
-    // MARK: Coordinator – tracks last-loaded content to avoid redundant reloads
+    // MARK: Coordinator – tracks content, preserves scroll across reloads
 
-    class Coordinator {
+    class Coordinator: NSObject, WKNavigationDelegate {
         var lastHTML: String = ""
         var lastBaseURL: URL? = nil
+        var pendingScrollY: Double = 0
+        var shouldRestoreScroll = false
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            guard shouldRestoreScroll else { return }
+            shouldRestoreScroll = false
+            let y = pendingScrollY
+            webView.evaluateJavaScript("""
+                window.scrollTo(0, \(y));
+                document.body.classList.add('reloaded');
+                setTimeout(function(){ document.body.classList.remove('reloaded'); }, 800);
+            """, completionHandler: nil)
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -109,6 +125,7 @@ struct MarkdownWebView: NSViewRepresentable {
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         let webView = DropAwareWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
+        webView.navigationDelegate = context.coordinator
         webView.onDropTargeted = onDropTargeted
         webView.onFileDrop     = onFileDrop
         findController?.webView = webView
@@ -118,15 +135,32 @@ struct MarkdownWebView: NSViewRepresentable {
     func updateNSView(_ webView: DropAwareWebView, context: Context) {
         webView.onDropTargeted  = onDropTargeted
         webView.onFileDrop      = onFileDrop
+        webView.navigationDelegate = context.coordinator
         findController?.webView = webView
 
-        guard context.coordinator.lastHTML    != htmlContent
-           || context.coordinator.lastBaseURL != baseURL
+        let coord = context.coordinator
+        guard coord.lastHTML != htmlContent || coord.lastBaseURL != baseURL
         else { return }
 
-        context.coordinator.lastHTML    = htmlContent
-        context.coordinator.lastBaseURL = baseURL
-        webView.loadHTMLString(wrapInHTMLPage(htmlContent), baseURL: baseURL)
+        let newHTML    = wrapInHTMLPage(htmlContent)
+        let newBase    = baseURL
+        let isReload   = !coord.lastHTML.isEmpty   // not the very first load
+
+        // Mark as up-to-date immediately to prevent duplicate calls
+        coord.lastHTML    = htmlContent
+        coord.lastBaseURL = baseURL
+
+        if isReload {
+            // Capture scroll position, then reload → coordinator restores it in didFinish
+            webView.evaluateJavaScript("window.scrollY") { [weak webView] result, _ in
+                guard let webView else { return }
+                coord.pendingScrollY = (result as? Double) ?? 0
+                coord.shouldRestoreScroll = true
+                webView.loadHTMLString(newHTML, baseURL: newBase)
+            }
+        } else {
+            webView.loadHTMLString(newHTML, baseURL: newBase)
+        }
     }
 
     // MARK: HTML template
@@ -367,6 +401,15 @@ struct MarkdownWebView: NSViewRepresentable {
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--fg-tertiary); }
+
+        /* Live-reload flash */
+        @keyframes mvReloadFlash {
+            0%   { box-shadow: inset 0 0 0 2px var(--accent); }
+            100% { box-shadow: inset 0 0 0 2px transparent; }
+        }
+        body.reloaded {
+            animation: mvReloadFlash 0.8s ease-out forwards;
+        }
 
         /* Find highlights */
         mark.mvfind {

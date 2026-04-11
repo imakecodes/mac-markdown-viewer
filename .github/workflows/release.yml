@@ -72,15 +72,17 @@ jobs:
       # ── Bundle .app ──────────────────────────────────────────────────────────
       - name: Create .app bundle
         run: |
-          APP=".build/Markdown Viewer.app"
-          EXE=".build/release/MarkdownViewer"
-          PLIST="Sources/MarkdownViewer/Info.plist"
+          APP=".build/Pendown.app"
+          EXE=".build/release/Pendown"
+          PLIST="Sources/Pendown/Info-SPM.plist"
+          ICNS="Sources/Pendown/AppIcon.icns"
 
           rm -rf "$APP"
           mkdir -p "$APP/Contents/MacOS"
           mkdir -p "$APP/Contents/Resources"
-          cp "$EXE"   "$APP/Contents/MacOS/MarkdownViewer"
+          cp "$EXE"   "$APP/Contents/MacOS/Pendown"
           cp "$PLIST" "$APP/Contents/Info.plist"
+          cp "$ICNS"  "$APP/Contents/Resources/AppIcon.icns"
           printf 'APPL????' > "$APP/Contents/PkgInfo"
           echo "✓ .app bundle created"
 
@@ -88,10 +90,10 @@ jobs:
       # Without a Developer ID certificate the app must be ad-hoc signed so that
       # macOS does not falsely report it as "damaged" when opened from a DMG.
       # Users on strict Gatekeeper settings will still need to right-click → Open
-      # or run: xattr -cr "Markdown Viewer.app"
+      # or run: xattr -cr "Pendown.app"
       - name: Ad-hoc code sign
         run: |
-          APP=".build/Markdown Viewer.app"
+          APP=".build/Pendown.app"
           codesign --deep --force --sign - --options runtime "$APP"
           codesign --verify --deep --strict "$APP" && echo "✓ Ad-hoc signature OK"
 
@@ -99,16 +101,16 @@ jobs:
       - name: Create DMG
         run: |
           VER="${{ steps.version.outputs.version_num }}"
-          DMG_NAME="MarkdownViewer-${VER}.dmg"
+          DMG_NAME="Pendown-${VER}.dmg"
           STAGING=".build/dmg-staging"
 
           rm -rf "$STAGING"
           mkdir -p "$STAGING"
-          cp -R ".build/Markdown Viewer.app" "$STAGING/"
+          cp -R ".build/Pendown.app" "$STAGING/"
           ln -sf /Applications "$STAGING/Applications"
 
           hdiutil create \
-            -volname "Markdown Viewer ${VER}" \
+            -volname "Pendown ${VER}" \
             -srcfolder "$STAGING" \
             -ov \
             -format UDZO \
@@ -167,7 +169,7 @@ jobs:
 
             ---
             **macOS 13+ required.**
-            Download `MarkdownViewer-${{ steps.version.outputs.version_num }}.dmg`, open it and drag **Markdown Viewer.app** to Applications.
+            Download `Pendown-${{ steps.version.outputs.version_num }}.dmg`, open it and drag **Pendown.app** to Applications.
           files: ${{ steps.dmg.outputs.dmg_name }}
           draft: false
           prerelease: false

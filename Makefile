@@ -1,20 +1,21 @@
-APP_NAME = Markdown Viewer
-BUNDLE_NAME = Markdown Viewer.app
-EXECUTABLE = MarkdownViewer
+APP_NAME = Pendown
+BUNDLE_NAME = Pendown.app
+EXECUTABLE = Pendown
 BUILD_DIR = .build
 RELEASE_DIR = $(BUILD_DIR)/release
 APP_BUNDLE = $(BUILD_DIR)/$(BUNDLE_NAME)
 INSTALL_DIR = /Applications
-PLIST = Sources/MarkdownViewer/Info.plist
-ICNS  = Sources/MarkdownViewer/AppIcon.icns
-DMG_NAME = MarkdownViewer.dmg
+PLIST = Sources/Pendown/Info-SPM.plist
+ICNS  = Sources/Pendown/AppIcon.icns
+ENTITLEMENTS = Sources/Pendown/Pendown.entitlements
+DMG_NAME = Pendown.dmg
 DMG_PATH = $(BUILD_DIR)/$(DMG_NAME)
-DMG_VOLUME = Markdown Viewer
+DMG_VOLUME = Pendown
 DMG_BG_SCRIPT = scripts/create-dmg-background.swift
 DMG_WINDOW_W = 660
 DMG_WINDOW_H = 400
 
-.PHONY: build release run clean install uninstall bundle dmg
+.PHONY: build release run clean install uninstall bundle dmg xcode help
 
 # Debug build
 build:
@@ -34,7 +35,7 @@ bundle: release
 	@cp "$(PLIST)" "$(APP_BUNDLE)/Contents/Info.plist"
 	@cp "$(ICNS)"  "$(APP_BUNDLE)/Contents/Resources/AppIcon.icns"
 	@echo "APPL????" > "$(APP_BUNDLE)/Contents/PkgInfo"
-	@echo "✓ $(BUNDLE_NAME) criado em $(BUILD_DIR)/"
+	@echo "✓ $(BUNDLE_NAME) created in $(BUILD_DIR)/"
 
 # Create distributable DMG
 dmg: bundle
@@ -50,35 +51,42 @@ run-release: bundle
 
 # Install to /Applications
 install: bundle
-	@echo "→ Instalando em $(INSTALL_DIR)..."
+	@echo "→ Installing to $(INSTALL_DIR)..."
 	@rm -rf "$(INSTALL_DIR)/$(BUNDLE_NAME)"
 	@cp -R "$(APP_BUNDLE)" "$(INSTALL_DIR)/$(BUNDLE_NAME)"
-	@echo "✓ $(BUNDLE_NAME) instalado em $(INSTALL_DIR)/"
+	@echo "✓ $(BUNDLE_NAME) installed in $(INSTALL_DIR)/"
 
 # Uninstall from /Applications
 uninstall:
-	@echo "→ Removendo $(INSTALL_DIR)/$(BUNDLE_NAME)..."
+	@echo "→ Removing $(INSTALL_DIR)/$(BUNDLE_NAME)..."
 	@rm -rf "$(INSTALL_DIR)/$(BUNDLE_NAME)"
-	@echo "✓ Removido"
+	@echo "✓ Removed"
+
+# Generate Xcode project (requires xcodegen)
+xcode:
+	@command -v xcodegen >/dev/null 2>&1 || { echo "Error: xcodegen not found. Install with: brew install xcodegen"; exit 1; }
+	xcodegen generate
+	@echo "✓ Pendown.xcodeproj generated — open in Xcode to configure signing"
 
 # Clean build artifacts
 clean:
 	swift package clean
 	rm -rf "$(APP_BUNDLE)" "$(DMG_PATH)"
-	@echo "✓ Limpo"
+	@echo "✓ Clean"
 
 # Show help
 help:
 	@echo ""
-	@echo "  Markdown Viewer"
-	@echo "  ───────────────────────────────"
+	@echo "  Pendown — Markdown editor & viewer"
+	@echo "  ───────────────────────────────────"
 	@echo "  make build       Build (debug)"
 	@echo "  make release     Build (release)"
-	@echo "  make bundle      Criar .app bundle"
-	@echo "  make dmg         Criar DMG distribuível"
-	@echo "  make run         Build e executar (debug)"
-	@echo "  make run-release Build e executar (release)"
-	@echo "  make install     Instalar em /Applications"
-	@echo "  make uninstall   Remover de /Applications"
-	@echo "  make clean       Limpar artifacts"
+	@echo "  make bundle      Create .app bundle"
+	@echo "  make dmg         Create distributable DMG"
+	@echo "  make run         Build and run (debug)"
+	@echo "  make run-release Build and run (release)"
+	@echo "  make install     Install to /Applications"
+	@echo "  make uninstall   Remove from /Applications"
+	@echo "  make xcode       Generate Xcode project"
+	@echo "  make clean       Clean artifacts"
 	@echo ""

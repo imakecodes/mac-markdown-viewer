@@ -1,4 +1,4 @@
-# Project Rules — mac-md-viewer
+# Project Rules — Pendown
 
 ## Stack
 - **Language**: Swift 5.9+, targeting macOS 13+

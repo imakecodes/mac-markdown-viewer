@@ -182,9 +182,9 @@ func drawCentredText(_ text: String, at point: CGPoint, size: CGFloat, alpha: CG
 }
 
 let labelY = CGFloat(height) * 0.20
-drawCentredText("Markdown Viewer", at: CGPoint(x: leftCX,  y: labelY), size: 13, alpha: 0.55, bold: true)
+drawCentredText("Pendown", at: CGPoint(x: leftCX,  y: labelY), size: 13, alpha: 0.55, bold: true)
 drawCentredText("Applications",    at: CGPoint(x: rightCX, y: labelY), size: 13, alpha: 0.55, bold: true)
-drawCentredText("Arraste para instalar", at: CGPoint(x: CGFloat(width) / 2, y: CGFloat(height) * 0.09),
+drawCentredText("Drag to install", at: CGPoint(x: CGFloat(width) / 2, y: CGFloat(height) * 0.09),
                 size: 11, alpha: 0.30)
 
 // ──────────────────────────────────────────────

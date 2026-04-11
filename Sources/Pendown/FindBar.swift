@@ -4,10 +4,10 @@ import WebKit
 // MARK: - Notification names
 
 extension Notification.Name {
-    static let activateFindBar = Notification.Name("com.markdownviewer.activateFindBar")
-    static let closeFindBar    = Notification.Name("com.markdownviewer.closeFindBar")
-    static let findNext        = Notification.Name("com.markdownviewer.findNext")
-    static let findPrev        = Notification.Name("com.markdownviewer.findPrev")
+    static let activateFindBar = Notification.Name("com.pendown.activateFindBar")
+    static let closeFindBar    = Notification.Name("com.pendown.closeFindBar")
+    static let findNext        = Notification.Name("com.pendown.findNext")
+    static let findPrev        = Notification.Name("com.pendown.findPrev")
 }
 
 // MARK: - FindController
@@ -59,7 +59,7 @@ class FindNSTextField: NSTextField {
 
 struct FindTextField: NSViewRepresentable {
     @Binding var text: String
-    var placeholder: String = "Buscar…"
+    var placeholder: String = "Search…"
     var onEscape: () -> Void
     var onEnter:  () -> Void
 
@@ -140,6 +140,7 @@ struct FindBar: View {
 
             FindTextField(
                 text: $query,
+                placeholder: L.searchEllipsis,
                 onEscape: close,
                 onEnter:  { controller.next() }
             )
@@ -158,21 +159,19 @@ struct FindBar: View {
 
             Divider().frame(height: 12)
 
-            // ↑ ↓ navigation
             HStack(spacing: 0) {
-                arrowButton("chevron.up",   help: "Anterior ⇧⌘G") { controller.prev() }
-                arrowButton("chevron.down", help: "Próximo ⌘G")    { controller.next() }
+                arrowButton("chevron.up",   help: L.previousShortcut) { controller.prev() }
+                arrowButton("chevron.down", help: L.nextShortcut)     { controller.next() }
             }
             .disabled(controller.matchCount == 0)
 
-            // × close
             Button(action: close) {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Fechar  Esc")
+            .help(L.closeEsc)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
